@@ -4,7 +4,7 @@
 
 Kitty Screen 是一个 Tauri + React 屏幕保护程序，会用猫咪动画作为屏幕遮挡层。它会在屏幕连续开启达到你设置的时间后自动启用，用来打断长时间不间断看屏幕的状态。
 
-动画素材先通过绿幕猫咪视频生成，再用 FFmpeg 转成带透明通道的 WebM，供应用使用。
+动画素材先通过绿幕猫咪视频生成，再用 FFmpeg 转成分平台的透明视频资源，供应用使用。
 
 <p align="center">
   <img src="assets/icon.png" alt="Kitty Screen 应用图标" width="200" />
@@ -98,15 +98,17 @@ assets/kitty-loop.mp4
 bun run videos
 ```
 
-这个命令会运行 [scripts/green-screen-to-webm.mjs](scripts/green-screen-to-webm.mjs)，它会：
+这个命令会运行 [scripts/generate-videos.mjs](scripts/generate-videos.mjs)，它会：
 
 - 读取 `assets/kitty.mp4` 和 `assets/kitty-loop.mp4`。
 - 使用 FFmpeg `chromakey` 去掉绿色背景。
 - 做绿色溢色处理。
-- 输出带透明通道的 WebM 到 `src/assets/kitty.webm` 和 `src/assets/kitty-loop.webm`。
+- 输出分平台透明视频资源到 `resources/videos/macos/kitty-screen.mov` 和 `resources/videos/windows/kitty-screen.webm`。
 - 使用 `ffprobe` 检查输出是否带 alpha 通道。
 
-如果视频生成工具导出的绿幕颜色和脚本当前 key color 不接近，需要调整 `scripts/green-screen-to-webm.mjs` 里的 `keyColor`、`similarity` 和 `blend` 常量。
+可以用 `bun run videos -- --platform macos` 或 `bun run videos -- --platform windows` 只重新生成单个平台的资源。
+
+如果视频生成工具导出的绿幕颜色和脚本当前 key color 不接近，需要调整 `scripts/generate-videos.mjs` 里的 `keyColor`、`similarity` 和 `blend` 常量。
 
 ## 开发
 

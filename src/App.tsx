@@ -1,7 +1,8 @@
 import FlipClockCountdown from "@leenguyen/react-flip-clock-countdown";
 import "@leenguyen/react-flip-clock-countdown/dist/index.css";
-import { invoke } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { resolveResource } from "@tauri-apps/api/path";
 import { Check, ExternalLink, Play, Power } from "lucide-react";
 import {
   useCallback,
@@ -12,8 +13,6 @@ import {
   type ReactNode,
 } from "react";
 import "./App.css";
-import kittyScreenMacVideo from "./assets/kitty-screen-mac.mov";
-import kittyScreenWindowsVideo from "./assets/kitty-screen-windows.webm";
 import { Button } from "./components/ui/pixelact-ui/button";
 import { Label } from "./components/ui/pixelact-ui/label";
 import type { Locales, TranslationFunctions } from "./i18n/i18n-types";
@@ -82,8 +81,10 @@ function isApplePlatform() {
   return /mac|iphone|ipad|ipod/i.test(platform + userAgent);
 }
 
-function screensaverVideo() {
-  return isApplePlatform() ? kittyScreenMacVideo : kittyScreenWindowsVideo;
+function screensaverVideoResourcePath() {
+  return isApplePlatform()
+    ? "videos/kitty-screen-mac.mov"
+    : "videos/kitty-screen-windows.webm";
 }
 
 function isSupportedLocale(locale: string): locale is Locales {
@@ -372,9 +373,9 @@ function ScreensaverView({
   state: ScreensaverState;
 }) {
   const [showClock, setShowClock] = useState(false);
+  const [videoSource, setVideoSource] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isReplayingLoopRef = useRef(false);
-  const videoSrc = useMemo(screensaverVideo, []);
   const target = useMemo(() => {
     if (state.endsAtMs > Date.now()) {
       return state.endsAtMs;
@@ -382,6 +383,28 @@ function ScreensaverView({
 
     return Date.now() + 1000;
   }, [state.endsAtMs, state.generation]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadVideoSource() {
+      try {
+        const path = await resolveResource(screensaverVideoResourcePath());
+
+        if (!cancelled) {
+          setVideoSource(convertFileSrc(path));
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void loadVideoSource();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -399,7 +422,7 @@ function ScreensaverView({
       return;
     }
 
-    if (video) {
+    if (video && videoSource) {
       video.currentTime = 0;
       void video.play().catch((error: unknown) => {
         console.error(error);
@@ -413,7 +436,7 @@ function ScreensaverView({
     return () => {
       window.clearTimeout(timer);
     };
-  }, [state.generation, state.isShowing]);
+  }, [state.generation, state.isShowing, videoSource]);
 
   const close = useCallback(async () => {
     try {
@@ -473,7 +496,7 @@ function ScreensaverView({
         onTimeUpdate={replayLoopBeforeEnd}
         playsInline
         preload="auto"
-        src={videoSrc}
+        src={videoSource ?? undefined}
       />
       <section className="screensaver__content" data-visible={showClock}>
         <FlipClockCountdown

@@ -4,7 +4,7 @@
 
 Kitty Screen is a Tauri + React screen saver app that displays a cat animation as a screen-blocking overlay. It activates after the screen has stayed on continuously for the configured amount of time, helping interrupt long uninterrupted screen sessions.
 
-The animation asset is produced from green-screen cat footage, then converted into transparent WebM files for the app.
+The animation asset is produced from green-screen cat footage, then converted into platform-specific transparent video resources for the app.
 
 <p align="center">
   <img src="assets/icon.png" alt="Kitty Screen app icon" width="200" />
@@ -98,15 +98,17 @@ Use the existing conversion script:
 bun run videos
 ```
 
-This runs [scripts/green-screen-to-webm.mjs](scripts/green-screen-to-webm.mjs), which:
+This runs [scripts/generate-videos.mjs](scripts/generate-videos.mjs), which:
 
 - Reads `assets/kitty.mp4` and `assets/kitty-loop.mp4`.
 - Uses FFmpeg `chromakey` to remove the green background.
 - Applies green despill.
-- Writes alpha-enabled WebM files to `src/assets/kitty.webm` and `src/assets/kitty-loop.webm`.
+- Writes platform-specific alpha video resources to `resources/videos/macos/kitty-screen.mov` and `resources/videos/windows/kitty-screen.webm`.
 - Verifies the output alpha channel with `ffprobe`.
 
-If the generated green-screen color is not close to the script's current key color, update the `keyColor`, `similarity`, and `blend` constants in `scripts/green-screen-to-webm.mjs`.
+Use `bun run videos -- --platform macos` or `bun run videos -- --platform windows` to regenerate only one platform.
+
+If the generated green-screen color is not close to the script's current key color, update the `keyColor`, `similarity`, and `blend` constants in `scripts/generate-videos.mjs`.
 
 ## Development
 

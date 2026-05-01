@@ -11,6 +11,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const platform = parsePlatform(process.argv.slice(2));
 
 const introInput = resolve(repoRoot, "assets/kitty.mp4");
 const loopInput = resolve(repoRoot, "assets/kitty-loop.mp4");
@@ -31,8 +32,8 @@ const keyFilter = [
 ].join(",");
 
 const outputs = {
-  mac: resolve(repoRoot, "src/assets/kitty-screen-mac.mov"),
-  windows: resolve(repoRoot, "src/assets/kitty-screen-windows.webm"),
+  mac: resolve(repoRoot, "resources/videos/macos/kitty-screen.mov"),
+  windows: resolve(repoRoot, "resources/videos/windows/kitty-screen.webm"),
 };
 
 ensureCommand("ffmpeg");
@@ -43,10 +44,20 @@ ensureInput(loopInput);
 const tempDir = mkdtempSync(join(tmpdir(), "kitty-screen-videos-"));
 
 try {
+  if (platform === "all" || platform === "windows") {
+    generateWindowsVideo();
+  }
+
+  if (platform === "all" || platform === "macos") {
+    generateMacVideo();
+  }
+} finally {
+  rmSync(tempDir, { force: true, recursive: true });
+}
+
+function generateWindowsVideo() {
   const windowsIntro = join(tempDir, "kitty-intro-windows.webm");
   const windowsLoop = join(tempDir, "kitty-loop-windows.webm");
-  const macIntro = join(tempDir, "kitty-intro-mac.mov");
-  const macLoop = join(tempDir, "kitty-loop-mac.mov");
 
   encodeWindowsWebm(introInput, windowsIntro);
   encodeWindowsWebm(loopInput, windowsLoop, loopDuration);
@@ -57,14 +68,17 @@ try {
   verifyWebmAlpha(outputs.windows);
   verifyTransparentCorner(outputs.windows, ["-c:v", "libvpx-vp9"]);
   logOutput(outputs.windows);
+}
+
+function generateMacVideo() {
+  const macIntro = join(tempDir, "kitty-intro-mac.mov");
+  const macLoop = join(tempDir, "kitty-loop-mac.mov");
 
   encodeMacHevc(introInput, macIntro);
   encodeMacHevc(loopInput, macLoop, loopDuration);
   encodeLoopedMacHevc(macIntro, macLoop, outputs.mac);
   verifyTransparentCorner(outputs.mac);
   logOutput(outputs.mac);
-} finally {
-  rmSync(tempDir, { force: true, recursive: true });
 }
 
 function encodeWindowsWebm(input, output, duration) {
@@ -203,6 +217,26 @@ function ensureInput(input) {
   }
 
   throw new Error(`Source path is not a file: ${rel(input)}`);
+}
+
+function parsePlatform(args) {
+  const platformArgIndex = args.findIndex(
+    (arg) => arg === "--platform" || arg.startsWith("--platform="),
+  );
+  const value =
+    platformArgIndex === -1
+      ? "all"
+      : args[platformArgIndex].startsWith("--platform=")
+        ? args[platformArgIndex].slice("--platform=".length)
+        : args[platformArgIndex + 1];
+
+  if (["all", "macos", "windows"].includes(value)) {
+    return value;
+  }
+
+  throw new Error(
+    `Unsupported --platform value: ${value}. Use all, macos, or windows.`,
+  );
 }
 
 function verifyWebmAlpha(output) {
