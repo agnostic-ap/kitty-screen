@@ -6,6 +6,9 @@ const fr: Translation = {
     durationLabel: "Durée",
     languageLabel: "Langue",
     preview: "Aperçu",
+    github: "GitHub",
+    credit:
+      "Créé par Elliot et sa fille « 毛球 » (son nom veut dire « boule de poils » ; c’est une chatte Norvégienne de 4 ans).",
   },
   durations: {
     seconds15: "15s",

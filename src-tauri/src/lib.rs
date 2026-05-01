@@ -19,7 +19,7 @@ const DURATION_OPTIONS: [u64; 10] = [15, 30, 60, 90, 120, 180, 300, 600, 900, 18
 const DEFAULT_DELAY_SECONDS: u64 = 30 * 60;
 const DEFAULT_DURATION_SECONDS: u64 = 30;
 const DEFAULT_LOCALE: &str = "zh-CN";
-const PREVIEW_SECONDS: u64 = 5;
+const PREVIEW_SECONDS: u64 = 30;
 const LOCALE_OPTIONS: [&str; 9] = [
     "en", "zh-CN", "zh-HK", "zh-TW", "ja", "ko", "es", "fr", "pt",
 ];
@@ -194,7 +194,8 @@ fn now_ms() -> u64 {
 }
 
 fn create_screensaver_window(app: &mut tauri::App) -> tauri::Result<()> {
-    WebviewWindowBuilder::new(
+    let initial_bounds = initial_overlay_logical_bounds(app)?;
+    let mut builder = WebviewWindowBuilder::new(
         app,
         "screensaver",
         WebviewUrl::App("index.html?screensaver".into()),
@@ -210,10 +211,43 @@ fn create_screensaver_window(app: &mut tauri::App) -> tauri::Result<()> {
     .skip_taskbar(true)
     .resizable(false)
     .focused(false)
-    .visible(false)
-    .build()?;
+    .visible(false);
+
+    if let Some((x, y, width, height)) = initial_bounds {
+        builder = builder.position(x, y).inner_size(width, height);
+    }
+
+    let window = builder.build()?;
+
+    apply_transparent_screensaver_background(&window)?;
 
     Ok(())
+}
+
+fn initial_overlay_logical_bounds(app: &tauri::App) -> tauri::Result<Option<(f64, f64, f64, f64)>> {
+    let monitor = app
+        .get_webview_window("main")
+        .and_then(|main| main.current_monitor().ok().flatten())
+        .or(app.primary_monitor()?);
+    let Some(monitor) = monitor else {
+        return Ok(None);
+    };
+
+    let work_area = monitor.work_area();
+    let position = work_area.position;
+    let size = work_area.size;
+    let scale_factor = monitor.scale_factor().max(1.0);
+
+    Ok(Some((
+        f64::from(position.x) / scale_factor,
+        f64::from(position.y) / scale_factor,
+        f64::from(size.width) / scale_factor,
+        f64::from(size.height) / scale_factor,
+    )))
+}
+
+fn apply_transparent_screensaver_background(window: &WebviewWindow) -> tauri::Result<()> {
+    window.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))
 }
 
 fn setup_main_window(app: &AppHandle) {
@@ -364,9 +398,7 @@ fn show_screensaver(app: &AppHandle, duration_seconds: u64, mode: &str) -> Resul
     window
         .set_fullscreen(false)
         .map_err(|error| error.to_string())?;
-    window
-        .set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))
-        .map_err(|error| error.to_string())?;
+    apply_transparent_screensaver_background(&window).map_err(|error| error.to_string())?;
     place_foremost_overlay(app, &window)?;
     window.show().map_err(|error| error.to_string())?;
     window.set_focus().map_err(|error| error.to_string())?;

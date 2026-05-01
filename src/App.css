@@ -8,7 +8,7 @@
     "Apple SD Gothic Neo", "Noto Sans CJK SC", "Noto Sans CJK TC",
     "Noto Sans CJK JP", "Noto Sans CJK KR", sans-serif;
   color: #101014;
-  background: transparent;
+  background: rgba(0, 0, 0, 0);
   font-family:
     Inter,
     ui-sans-serif,
@@ -27,6 +27,7 @@
 html,
 body,
 #root {
+  background: rgba(0, 0, 0, 0);
   height: 100%;
   overflow: hidden;
   overscroll-behavior: none;
@@ -34,7 +35,7 @@ body,
 }
 
 body {
-  background: transparent;
+  background: rgba(0, 0, 0, 0);
   inset: 0;
   margin: 0;
   min-width: 320px;
@@ -49,10 +50,13 @@ button {
   align-items: center;
   background:
     linear-gradient(90deg, rgba(16, 16, 20, 0.07) 1px, transparent 1px),
-    linear-gradient(rgba(16, 16, 20, 0.07) 1px, transparent 1px), #dff7ed;
+    linear-gradient(rgba(16, 16, 20, 0.07) 1px, transparent 1px), #ffbff2;
   background-size: 24px 24px;
   display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2.4vh, 1.25rem);
   height: 100%;
+  justify-content: center;
   overflow: hidden;
   padding: clamp(1rem, 4vw, 3rem);
   width: 100%;
@@ -69,7 +73,7 @@ button {
   flex-direction: column;
   gap: clamp(1.3rem, 2.8vh, 1.85rem);
   margin: 0 auto;
-  max-height: calc(100vh - clamp(2rem, 8vw, 6rem));
+  max-height: calc(100vh - clamp(4rem, 10vw, 8rem));
   max-width: 880px;
   overflow: hidden;
   padding: clamp(1rem, 3.6vw, 2rem);
@@ -107,7 +111,7 @@ h1 {
 }
 
 .settings-title {
-  color: #1462ff;
+  color: #ffd84d;
   font-family:
     "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   font-size: clamp(0.82rem, 2.7vw, 1.55rem);
@@ -164,6 +168,9 @@ h1 {
 .settings-shell[data-locale^="zh"] .pixel__label,
 .settings-shell[data-locale="ja"] .pixel__label,
 .settings-shell[data-locale="ko"] .pixel__label,
+.settings-shell[data-locale^="zh"] .settings-credit,
+.settings-shell[data-locale="ja"] .settings-credit,
+.settings-shell[data-locale="ko"] .settings-credit,
 .settings-shell[data-locale^="zh"]
   .option-grid:not(.option-grid--language)
   .pixel__button,
@@ -179,12 +186,18 @@ h1 {
   line-height: 1.2;
 }
 
+.settings-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-top: 0.25rem;
+}
+
 .settings-actions {
   align-items: center;
   display: flex;
   gap: 1rem;
   justify-content: flex-start;
-  padding-top: 0.25rem;
 }
 
 .settings-actions .pixel__button {
@@ -192,49 +205,80 @@ h1 {
   font-weight: 800;
 }
 
+.settings-credit {
+  color: rgba(16, 16, 20, 0.72);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+  max-width: min(100%, 880px);
+  text-align: center;
+  width: min(100%, 880px);
+}
+
 .screensaver {
-  background-color: #19ec19;
-  background-position: center;
-  background-size: cover;
+  background: rgba(0, 0, 0, 0);
   color: #fbfaf1;
+  height: 100vh;
   min-height: 100vh;
   overflow: hidden;
   position: relative;
+  width: 100vw;
 }
 
-.screensaver__shade {
-  background:
-    linear-gradient(
-      90deg,
-      rgba(16, 16, 20, 0.92) 0%,
-      rgba(16, 16, 20, 0.55) 42%,
-      rgba(16, 16, 20, 0.08) 100%
-    ),
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.08) 0 1px,
-      transparent 1px 5px
-    );
+.screensaver__video {
+  background: rgba(0, 0, 0, 0);
+  height: 100%;
   inset: 0;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  pointer-events: none;
   position: absolute;
+  transition: opacity 140ms linear;
+  width: 100%;
+  will-change: opacity;
+  z-index: 0;
+}
+
+.screensaver__video[data-active="true"] {
+  opacity: 1;
 }
 
 .screensaver__content {
   display: flex;
   flex-direction: column;
-  left: clamp(1rem, 6vw, 5rem);
-  max-width: calc(100vw - clamp(2rem, 12vw, 10rem));
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
+  max-width: calc(100vw - clamp(3rem, 12vw, 9rem));
+  opacity: 0;
+  pointer-events: none;
+  position: fixed;
+  right: clamp(1.75rem, 4.5vw, 4rem);
+  top: clamp(1.75rem, 4.5vw, 4rem);
+  transform: translateY(-0.5rem);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+  z-index: 2;
+}
+
+.screensaver__content[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .kitty-countdown {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  filter: drop-shadow(0 8px 0 rgba(16, 16, 20, 0.4))
+    drop-shadow(0 18px 22px rgba(16, 16, 20, 0.34));
+  gap: 0.3rem;
+  justify-content: flex-end;
+  text-shadow:
+    0 2px 0 #101014,
+    2px 0 0 #101014,
+    -2px 0 0 #101014,
+    0 -2px 0 #101014;
 }
 
 .kitty-countdown .flip-clock {
@@ -243,11 +287,13 @@ h1 {
 }
 
 .screensaver__close {
+  filter: drop-shadow(0 7px 0 rgba(16, 16, 20, 0.4))
+    drop-shadow(0 14px 16px rgba(16, 16, 20, 0.32));
   position: fixed;
   left: calc(1.25rem + var(--box-shadow-width));
   right: auto;
   top: calc(1.25rem + var(--box-shadow-width));
-  z-index: 2;
+  z-index: 3;
 }
 
 @media (max-width: 720px) {
@@ -258,7 +304,8 @@ h1 {
   }
 
   .screensaver__content {
-    top: 48%;
+    right: 1.5rem;
+    top: 1.5rem;
   }
 }
 

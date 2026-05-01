@@ -146,6 +146,9 @@ pnpm-debug.log*
 dist-ssr/
 tmp/
 *.local
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .idea

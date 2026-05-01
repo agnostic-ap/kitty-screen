@@ -6,6 +6,9 @@ const en: BaseTranslation = {
     durationLabel: "Duration",
     languageLabel: "Language",
     preview: "Preview",
+    github: "GitHub",
+    credit:
+      'Made by Elliot and his daughter "毛球" (the name means "fluffy furball"; she is a 4-year-old Norwegian Forest cat).',
   },
   durations: {
     seconds15: "15s",

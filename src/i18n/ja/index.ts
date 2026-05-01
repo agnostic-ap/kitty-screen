@@ -6,6 +6,9 @@ const ja: Translation = {
     durationLabel: "表示時間",
     languageLabel: "言語",
     preview: "プレビュー",
+    github: "GitHub",
+    credit:
+      "Elliot と娘の「毛球」（名前は「ふわふわの毛玉」という意味。4歳のノルウェージャンフォレストキャット）が一緒に作りました。",
   },
   durations: {
     seconds15: "15秒",

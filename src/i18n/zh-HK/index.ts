@@ -6,6 +6,8 @@ const zh_HK: Translation = {
     durationLabel: "持續多久",
     languageLabel: "語言",
     preview: "預覽",
+    github: "GitHub",
+    credit: "由 Elliot 和他的女兒「毛球」（一隻 4 歲的挪威森林貓）共同開發",
   },
   durations: {
     seconds15: "15秒",

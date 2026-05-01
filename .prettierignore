@@ -22,6 +22,5 @@ bun.lock
 
 refs
 tmp
-docs
 dist
 src-tauri/target/

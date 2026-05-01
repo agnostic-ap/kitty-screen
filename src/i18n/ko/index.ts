@@ -6,6 +6,9 @@ const ko: Translation = {
     durationLabel: "지속 시간",
     languageLabel: "언어",
     preview: "미리보기",
+    github: "GitHub",
+    credit:
+      'Elliot과 그의 딸 "毛球"(이름은 "복슬복슬한 털뭉치"라는 뜻의 4살 노르웨이숲 고양이)이 함께 만들었습니다.',
   },
   durations: {
     seconds15: "15초",

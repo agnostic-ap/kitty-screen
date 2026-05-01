@@ -2,22 +2,24 @@ import FlipClockCountdown from "@leenguyen/react-flip-clock-countdown";
 import "@leenguyen/react-flip-clock-countdown/dist/index.css";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { Check, Play, Power } from "lucide-react";
+import { Check, ExternalLink, Play, Power } from "lucide-react";
 import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import "./App.css";
+import kittyScreenMacVideo from "./assets/kitty-screen-mac.mov";
+import kittyScreenWindowsVideo from "./assets/kitty-screen-windows.webm";
 import { Button } from "./components/ui/pixelact-ui/button";
 import { Label } from "./components/ui/pixelact-ui/label";
 import type { Locales, TranslationFunctions } from "./i18n/i18n-types";
 import { i18nObject } from "./i18n/i18n-util";
 import { loadAllLocales } from "./i18n/i18n-util.sync";
 
-import catImage from "../assets/001.png";
 import appLogo from "./assets/app-logo.png";
 
 loadAllLocales();
@@ -56,6 +58,11 @@ const DEFAULT_SETTINGS: Settings = {
   locale: DEFAULT_LOCALE,
 };
 
+const CLOCK_REVEAL_DELAY_MS = 10_000;
+const LOOP_REPLAY_START_SECONDS = 8.466;
+const LOOP_REPLAY_END_PADDING_SECONDS = 0.18;
+const GITHUB_URL = "https://github.com/elliothux/kitty-screen";
+
 const DEFAULT_SCREENSAVER_STATE: ScreensaverState = {
   isShowing: false,
   durationSeconds: 30,
@@ -66,6 +73,17 @@ const DEFAULT_SCREENSAVER_STATE: ScreensaverState = {
 
 function isScreensaverRoute() {
   return new URLSearchParams(window.location.search).has("screensaver");
+}
+
+function isApplePlatform() {
+  const platform = navigator.platform || "";
+  const userAgent = navigator.userAgent || "";
+
+  return /mac|iphone|ipad|ipod/i.test(platform + userAgent);
+}
+
+function screensaverVideo() {
+  return isApplePlatform() ? kittyScreenMacVideo : kittyScreenWindowsVideo;
 }
 
 function isSupportedLocale(locale: string): locale is Locales {
@@ -263,6 +281,18 @@ function App() {
     await refreshScreensaverState();
   }, [refreshScreensaverState]);
 
+  const openGitHub = useCallback(async () => {
+    try {
+      await invoke("plugin:opener|open_url", {
+        url: GITHUB_URL,
+        with: null,
+      });
+    } catch (error) {
+      console.error(error);
+      window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
+    }
+  }, []);
+
   if (isScreensaverRoute()) {
     return <ScreensaverView LL={LL} state={screensaverState} />;
   }
@@ -311,18 +341,25 @@ function App() {
           variant="language"
         />
 
-        <footer className="settings-actions">
-          <Button
-            disabled={isSaving}
-            onClick={preview}
-            size="lg"
-            variant="warning"
-          >
-            <Play aria-hidden="true" />
-            {LL.settings.preview()}
-          </Button>
+        <footer className="settings-footer">
+          <div className="settings-actions">
+            <Button
+              disabled={isSaving}
+              onClick={preview}
+              size="lg"
+              variant="warning"
+            >
+              <Play aria-hidden="true" />
+              {LL.settings.preview()}
+            </Button>
+            <Button onClick={openGitHub} size="lg" variant="secondary">
+              <ExternalLink aria-hidden="true" />
+              {LL.settings.github()}
+            </Button>
+          </div>
         </footer>
       </section>
+      <p className="settings-credit">{LL.settings.credit()}</p>
     </main>
   );
 }
@@ -334,6 +371,10 @@ function ScreensaverView({
   LL: TranslationFunctions;
   state: ScreensaverState;
 }) {
+  const [showClock, setShowClock] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const isReplayingLoopRef = useRef(false);
+  const videoSrc = useMemo(screensaverVideo, []);
   const target = useMemo(() => {
     if (state.endsAtMs > Date.now()) {
       return state.endsAtMs;
@@ -341,6 +382,38 @@ function ScreensaverView({
 
     return Date.now() + 1000;
   }, [state.endsAtMs, state.generation]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+
+    setShowClock(false);
+    isReplayingLoopRef.current = false;
+
+    if (!state.isShowing) {
+      video?.pause();
+
+      if (video) {
+        video.currentTime = 0;
+      }
+
+      return;
+    }
+
+    if (video) {
+      video.currentTime = 0;
+      void video.play().catch((error: unknown) => {
+        console.error(error);
+      });
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowClock(true);
+    }, CLOCK_REVEAL_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [state.generation, state.isShowing]);
 
   const close = useCallback(async () => {
     try {
@@ -350,25 +423,72 @@ function ScreensaverView({
     }
   }, []);
 
+  const replayLoop = useCallback(() => {
+    const video = videoRef.current;
+
+    if (!video || isReplayingLoopRef.current) {
+      return;
+    }
+
+    isReplayingLoopRef.current = true;
+    video.currentTime = LOOP_REPLAY_START_SECONDS;
+
+    void video.play().catch((error: unknown) => {
+      console.error(error);
+    });
+  }, []);
+
+  const replayLoopBeforeEnd = useCallback(() => {
+    const video = videoRef.current;
+
+    if (
+      !video ||
+      video.seeking ||
+      isReplayingLoopRef.current ||
+      !Number.isFinite(video.duration)
+    ) {
+      return;
+    }
+
+    if (
+      video.currentTime > LOOP_REPLAY_START_SECONDS + 1 &&
+      video.duration - video.currentTime <= LOOP_REPLAY_END_PADDING_SECONDS
+    ) {
+      replayLoop();
+    }
+  }, [replayLoop]);
+
   return (
-    <main
-      className="screensaver"
-      style={{ backgroundImage: `url(${catImage})` }}
-    >
-      <div className="screensaver__shade" />
-      <section className="screensaver__content">
+    <main className="screensaver">
+      <video
+        ref={videoRef}
+        aria-hidden="true"
+        className="screensaver__video"
+        data-active="true"
+        muted
+        onEnded={replayLoop}
+        onSeeked={() => {
+          isReplayingLoopRef.current = false;
+        }}
+        onTimeUpdate={replayLoopBeforeEnd}
+        playsInline
+        preload="auto"
+        src={videoSrc}
+      />
+      <section className="screensaver__content" data-visible={showClock}>
         <FlipClockCountdown
           key={`${state.generation}-${target}`}
           className="kitty-countdown"
           digitBlockStyle={{
             background: "#fbfaf1",
             borderRadius: 0,
+            boxShadow: "0 0 0 2px #101014, 0 5px 0 rgba(16, 16, 20, 0.55)",
             color: "#101014",
             fontFamily:
               '"Press Start 2P", ui-monospace, SFMono-Regular, Menlo, monospace',
-            fontSize: "clamp(54px, 6vw, 86px)",
-            height: "clamp(108px, 12vw, 168px)",
-            width: "clamp(82px, 9vw, 128px)",
+            fontSize: "clamp(30px, 4vw, 58px)",
+            height: "clamp(68px, 8vw, 116px)",
+            width: "clamp(50px, 6vw, 90px)",
           }}
           dividerStyle={{ color: "#101014", height: 1 }}
           duration={0.55}
@@ -383,9 +503,12 @@ function ScreensaverView({
           labels={["D", "H", "M", "S"]}
           onComplete={close}
           renderMap={[false, false, true, true]}
-          separatorStyle={{ color: "#fbfaf1", size: "clamp(14px, 2vw, 26px)" }}
+          separatorStyle={{
+            color: "#fbfaf1",
+            size: "clamp(13px, 1.8vw, 24px)",
+          }}
           showLabels={false}
-          spacing={{ clock: 24, digitBlock: 9 }}
+          spacing={{ clock: 16, digitBlock: 7 }}
           to={target}
         />
       </section>

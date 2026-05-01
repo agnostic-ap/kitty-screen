@@ -6,6 +6,9 @@ const pt: Translation = {
     durationLabel: "Duração",
     languageLabel: "Idioma",
     preview: "Prévia",
+    github: "GitHub",
+    credit:
+      'Criado por Elliot e sua filha "毛球" (o nome quer dizer "bolinha de pelo"; ela é uma gata da Floresta Norueguesa de 4 anos).',
   },
   durations: {
     seconds15: "15s",
