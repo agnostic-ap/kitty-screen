@@ -18,6 +18,12 @@ const env = {
   ...loadDotEnv(envPath),
 };
 
+if (customFlags.skipNotarization) {
+  removeNotarizationCredentials(env);
+} else {
+  normalizeNotarizationCredentials(env);
+}
+
 if (process.platform !== "darwin") {
   throw new Error("macOS packaging must run on macOS.");
 }
@@ -39,7 +45,7 @@ if (customFlags.requireNotarization && !hasNotarizationCredentials(env)) {
   throw new Error(
     [
       "Missing notarization credentials in .env.",
-      "Set APPLE_API_ISSUER + APPLE_API_KEY (+ APPLE_API_KEY_PATH), or set APPLE_ID + APPLE_PASSWORD + APPLE_TEAM_ID.",
+      "Set APPLE_API_KEY to the AuthKey .p8 path, APPLE_API_KEY_ID to the key ID, and APPLE_API_ISSUER to the issuer ID.",
     ].join("\n"),
   );
 }
@@ -65,12 +71,18 @@ function parseArgs(args) {
   const customFlags = {
     noSign: false,
     requireNotarization: false,
+    skipNotarization: false,
   };
   const tauriArgs = [];
 
   for (const arg of args) {
     if (arg === "--require-notarization") {
       customFlags.requireNotarization = true;
+      continue;
+    }
+
+    if (arg === "--skip-notarization") {
+      customFlags.skipNotarization = true;
       continue;
     }
 
@@ -136,14 +148,51 @@ function hasAny(env, keys) {
 }
 
 function hasNotarizationCredentials(env) {
-  const hasApiKey = Boolean(env.APPLE_API_ISSUER && env.APPLE_API_KEY);
-  const hasAppleId = Boolean(
-    env.APPLE_ID && env.APPLE_PASSWORD && env.APPLE_TEAM_ID,
+  return Boolean(
+    env.APPLE_API_KEY && env.APPLE_API_ISSUER && env.APPLE_API_KEY_PATH,
   );
+}
 
-  return hasApiKey || hasAppleId;
+function normalizeNotarizationCredentials(env) {
+  if (!env.APPLE_API_KEY || !env.APPLE_API_KEY_ID || !env.APPLE_API_ISSUER) {
+    return;
+  }
+
+  const apiKeyPath = resolveEnvPath(env.APPLE_API_KEY);
+
+  if (!existsSync(apiKeyPath)) {
+    throw new Error(`APPLE_API_KEY file not found: ${apiKeyPath}`);
+  }
+
+  // Tauri expects APPLE_API_KEY to be the key ID and APPLE_API_KEY_PATH to be
+  // the .p8 file path. Our .env follows the Electron/Lynx convention.
+  env.APPLE_API_KEY_PATH = apiKeyPath;
+  env.APPLE_API_KEY = env.APPLE_API_KEY_ID;
+  delete env.APPLE_API_KEY_ID;
+  delete env.APPLE_ID;
+  delete env.APPLE_PASSWORD;
+  delete env.APPLE_TEAM_ID;
+}
+
+function removeNotarizationCredentials(env) {
+  for (const key of [
+    "APPLE_API_ISSUER",
+    "APPLE_API_KEY",
+    "APPLE_API_KEY_ID",
+    "APPLE_API_KEY_PATH",
+    "APPLE_ID",
+    "APPLE_PASSWORD",
+    "APPLE_PROVIDER_SHORT_NAME",
+    "APPLE_TEAM_ID",
+  ]) {
+    delete env[key];
+  }
 }
 
 function relativeCommand(path) {
   return path.startsWith(rootDir) ? path.slice(rootDir.length + 1) : path;
+}
+
+function resolveEnvPath(path) {
+  return path.startsWith("/") ? path : resolve(rootDir, path);
 }

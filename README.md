@@ -7,14 +7,10 @@ Kitty Screen is a Tauri + React screen saver app that displays a cat animation a
 The animation asset is produced from green-screen cat footage, then converted into transparent WebM files for the app.
 
 <p align="center">
-  <img src="assets/icon.png" alt="Kitty Screen app icon" width="96" />
+  <img src="assets/icon.png" alt="Kitty Screen app icon" width="200" />
 </p>
 
 ## Preview
-
-<p>
-  <img src="assets/preview-app.png" alt="Kitty Screen app preview" width="720" />
-</p>
 
 <p>
   <img src="assets/preview-0.png" alt="Kitty Screen overlay preview 1" width="360" />
@@ -72,9 +68,9 @@ Each generated frame should use a flat `#00ff00` green-screen background with no
 
 See [PROMPTS.md](PROMPTS.md) for the full reusable prompt.
 
-### 3. Generate the Video With Kling AI
+### 3. Generate the Video With an AI Video Tool
 
-Upload the ordered green-screen keyframes to Kling AI and generate a continuous cat video.
+Use any AI video generator that supports first/last-frame or ordered keyframe guidance, for example Kling AI. Upload the ordered green-screen keyframes and generate a continuous cat video.
 
 Recommended output:
 
