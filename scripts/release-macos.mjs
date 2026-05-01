@@ -1,12 +1,15 @@
 import { spawnSync } from "node:child_process";
 import {
+  copyFileSync,
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -90,11 +93,18 @@ run("git", ["tag", tag]);
 run("git", ["push", options.remote, currentBranch]);
 run("git", ["push", options.remote, tag]);
 
+const uploadArtifacts = prepareUploadArtifacts(artifacts, nextVersion);
+
+console.log("[release:mac] upload names:");
+for (const artifact of uploadArtifacts) {
+  console.log(`  - ${rel(artifact)}`);
+}
+
 const ghArgs = [
   "release",
   "create",
   tag,
-  ...artifacts,
+  ...uploadArtifacts,
   "--title",
   `Kitty Screen ${tag}`,
 ];
@@ -345,6 +355,59 @@ function findMacArtifacts(version) {
       basename(path).includes(version)
     );
   }).sort(compareByModifiedTimeDesc);
+}
+
+function prepareUploadArtifacts(artifacts, version) {
+  const uploadDir = resolve(rootDir, "tmp", "release-artifacts", `v${version}`);
+
+  rmSync(uploadDir, { force: true, recursive: true });
+  mkdirSync(uploadDir, { recursive: true });
+
+  return artifacts.map((artifact, index) => {
+    const classifier = inferMacClassifier(artifact);
+    const suffix = classifier ? `macos-${classifier}` : "macos";
+    const output = resolve(
+      uploadDir,
+      uniqueArtifactName(
+        uploadDir,
+        `Kitty-Screen_${version}_${suffix}${extname(artifact)}`,
+        index,
+      ),
+    );
+
+    copyFileSync(artifact, output);
+    return output;
+  });
+}
+
+function inferMacClassifier(path) {
+  const name = basename(path).toLowerCase();
+
+  if (name.includes("universal")) {
+    return "universal";
+  }
+
+  if (name.includes("aarch64") || name.includes("arm64")) {
+    return "arm64";
+  }
+
+  if (name.includes("x86_64") || name.includes("x64")) {
+    return "x64";
+  }
+
+  return null;
+}
+
+function uniqueArtifactName(dir, name, index) {
+  const path = resolve(dir, name);
+
+  if (!existsSync(path)) {
+    return name;
+  }
+
+  const extension = extname(name);
+  const stem = name.slice(0, -extension.length);
+  return `${stem}-${index + 1}${extension}`;
 }
 
 function findFiles(dir, predicate) {
