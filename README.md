@@ -27,35 +27,43 @@ Reusable prompts for image and video generation live in [PROMPTS.md](PROMPTS.md)
 
 Use that file when generating a new cat identity or rebuilding the screensaver animation sequence.
 
-## Asset Generation Workflow
+## How to Customize Your Own Cat Character
 
-### 1. Collect Cat Reference Images
+You can replace the default cat with your own cat by rebuilding the animation assets. The app expects a green-screen entrance video and a shorter green-screen loop video, then converts them into transparent platform-specific resources during the build workflow.
 
-Start with high-resolution photos of the target cat.
+The short version is:
 
-Recommended coverage:
+1. Prepare reference photos of your cat.
+2. Generate ordered green-screen keyframes.
+3. Turn those keyframes into two green-screen videos.
+4. Convert the videos into transparent macOS and Windows resources.
+5. Run the app and tune the chroma key if needed.
 
-- Front-facing face close-up.
+### 1. Prepare Reference Photos
+
+Collect clear, high-resolution photos of the cat you want to use. The image model needs enough visual information to keep the same identity across every generated frame.
+
+Recommended photo set:
+
+- A front-facing face close-up.
 - Left and right side profiles.
-- Full-body standing or walking pose.
-- Sitting pose.
-- Lying or relaxed pose.
-- Clear photos of coat markings, paws, tail, eyes, and fur length.
+- A full-body standing or walking pose.
+- A sitting pose.
+- A lying or relaxed pose.
+- Close shots that show coat markings, paws, tail, eyes, ear shape, and fur length.
 
-The image model should use these photos as the identity reference. The goal is to preserve the same cat across all generated frames.
+Keep the reference photos focused on one cat. Avoid photos with other animals, busy backgrounds, heavy filters, costumes, or extreme lighting. If your cat has distinctive markings, include at least one photo where those markings are easy to see.
 
-### 2. Generate Green-Screen Keyframes With GPT Image
+### 2. Generate Green-Screen Keyframes
 
-Use GPT Image to generate an ordered keyframe sequence for the cat.
+Use GPT Image or another image model that can follow image references. The goal is to generate a numbered sequence of still frames where your cat follows the same movement as the built-in example.
 
-Reference sequence:
+Use two kinds of references:
 
-- Use `assets/raw-furryball/001.png` through `assets/raw-furryball/012.png` as action and pose references.
-- Use the new cat photos only as the identity reference.
-- The action references should control pose, camera angle, body placement, and animation timing.
-- The new cat photos should control face, coat color, markings, body shape, fur length, paws, tail, and overall identity.
+- Identity references: your cat photos. These control face, coat color, markings, body shape, fur length, paws, tail, and general appearance.
+- Motion references: `assets/raw-furryball/001.png` through `assets/raw-furryball/012.png`. These control pose, camera angle, body placement, and animation timing.
 
-Output convention:
+Save the generated frames under a new folder:
 
 ```text
 assets/raw-<cat-name>/001.png
@@ -64,51 +72,79 @@ assets/raw-<cat-name>/002.png
 assets/raw-<cat-name>/012.png
 ```
 
-Each generated frame should use a flat `#00ff00` green-screen background with no shadows, floor, gradients, props, text, UI, or other animals.
+Each frame should use a flat `#00ff00` green-screen background. Keep it clean: no floor, shadows, gradients, props, text, UI, furniture, room background, or extra animals. A perfectly flat green background makes the FFmpeg chroma key step much cleaner.
 
-See [PROMPTS.md](PROMPTS.md) for the full reusable prompt.
+Use [PROMPTS.md](PROMPTS.md) as the starting prompt. Replace the identity description with details from your cat, but keep the action, framing, and green-screen constraints strict.
 
-### 3. Generate the Video With an AI Video Tool
+### 3. Generate the Entrance and Loop Videos
 
-Use any AI video generator that supports first/last-frame or ordered keyframe guidance, for example Kling AI. Upload the ordered green-screen keyframes and generate a continuous cat video.
+Use a video generation tool that supports first-frame, last-frame, or ordered keyframe guidance. Upload the numbered keyframes in order and generate a continuous green-screen cat animation.
 
-Recommended output:
+Recommended settings:
 
-- 16:9 video.
+- 16:9 output.
 - Locked camera.
-- Same cat identity for the full clip.
-- Uniform green-screen background for the full clip.
+- One consistent cat identity across the whole clip.
+- Uniform `#00ff00` green-screen background.
 - Slow entrance, stop, crouch, and final settled blocking pose.
-- No camera zoom, pan, tilt, tracking, room background, text, UI, shadows, props, or extra animals.
+- No zoom, pan, tilt, tracking shot, room background, props, text, UI, shadows, or second animal.
 
-Save the generated videos to:
+Export two videos:
 
 ```text
 assets/kitty.mp4
 assets/kitty-loop.mp4
 ```
 
-`kitty.mp4` is the full animation. `kitty-loop.mp4` is the shorter loop/idle segment used by the app after the main entrance animation.
+`assets/kitty.mp4` is the full entrance animation. It should include the cat moving into position and settling into the final screen-blocking pose.
 
-### 4. Remove the Green Background With FFmpeg
+`assets/kitty-loop.mp4` is a shorter idle loop. It should start from the settled pose and contain only subtle motion, such as breathing, blinking, or a small tail movement. This keeps the screensaver alive without constantly replaying the full entrance.
 
-Use the existing conversion script:
+### 4. Convert the Videos Into App Resources
+
+Install dependencies first if you have not already:
+
+```bash
+bun install
+```
+
+Then generate the transparent video resources:
 
 ```bash
 bun run videos
 ```
 
-This runs [scripts/generate-videos.mjs](scripts/generate-videos.mjs), which:
+This runs [scripts/generate-videos.mjs](scripts/generate-videos.mjs). It reads `assets/kitty.mp4` and `assets/kitty-loop.mp4`, removes the green background with FFmpeg, applies despill, verifies alpha, and writes the platform-specific outputs:
 
-- Reads `assets/kitty.mp4` and `assets/kitty-loop.mp4`.
-- Uses FFmpeg `chromakey` to remove the green background.
-- Applies green despill.
-- Writes platform-specific alpha video resources to `resources/videos/macos/kitty-screen.mov` and `resources/videos/windows/kitty-screen.webm`.
-- Verifies the output alpha channel with `ffprobe`.
+```text
+resources/videos/macos/kitty-screen.mov
+resources/videos/windows/kitty-screen.webm
+```
 
-Use `bun run videos -- --platform macos` or `bun run videos -- --platform windows` to regenerate only one platform.
+You can regenerate only one platform when iterating:
 
-If the generated green-screen color is not close to the script's current key color, update the `keyColor`, `similarity`, and `blend` constants in `scripts/generate-videos.mjs`.
+```bash
+bun run videos -- --platform macos
+bun run videos -- --platform windows
+```
+
+### 5. Preview and Tune the Result
+
+Run the Tauri app locally:
+
+```bash
+bun run app:dev
+```
+
+Use the Preview button in the app to check the overlay. Look for these issues:
+
+- Green edges around fur.
+- Missing transparent areas.
+- Flickering background.
+- Cat identity drifting between frames.
+- The loop jumping too sharply when it repeats.
+
+If the green background is not keyed cleanly, adjust `keyColor`, `similarity`, `blend`, and the despill constants in [scripts/generate-videos.mjs](scripts/generate-videos.mjs), then run `bun run videos` again. If the cat identity drifts or the pose changes too much, regenerate the keyframes or video before tuning FFmpeg; chroma key settings cannot fix inconsistent source footage.
 
 ## Development
 
