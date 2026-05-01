@@ -153,6 +153,8 @@ tmp/
 # Editor directories and files
 .idea
 
+.DS_Store
+
 src-tauri/target/
 src-tauri/gen/schemas/
 

@@ -1,6 +1,5 @@
 {
   "name": "kitty-screen",
-  "productName": "Kitty Screen",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -51,5 +50,6 @@
     "simple-git-hooks": "^2.13.1",
     "typescript": "~5.8.3",
     "vite": "^7.0.4"
-  }
+  },
+  "productName": "Kitty Screen"
 }
