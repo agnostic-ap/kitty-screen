@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+pnpm-debug.log*
+dist-ssr/
+tmp/
+*.local
+
+# Editor directories and files
+.idea
+
+src-tauri/target/
+src-tauri/gen/schemas/
+
+/refs/
+/tmp/smoke
+/docs/
