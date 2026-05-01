@@ -1,6 +1,6 @@
 {
   "name": "kitty-screen",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,6 +19,8 @@
     "lint": "(oxlint --fix . && knip) || echo '[warn] lint failed'",
     "prepare": "simple-git-hooks",
     "preview": "vite preview",
+    "release:mac": "node scripts/release-macos.mjs",
+    "release:windows:upload": "node scripts/release-windows-upload.mjs",
     "typecheck": "tsc --noEmit",
     "videos": "node scripts/generate-videos.mjs"
   },
