@@ -7,6 +7,9 @@ const ko: Translation = {
     languageLabel: "언어",
     preview: "미리보기",
     github: "GitHub",
+    updateAvailable: "새 버전이 있습니다",
+    updateDescription: "GitHub Releases에서 새 버전을 다운로드할 수 있습니다.",
+    updateOpen: "릴리스 보기",
     credit:
       'Elliot과 그의 딸 "毛球"(이름은 "복슬복슬한 털뭉치"라는 뜻의 4살 노르웨이숲 고양이)이 함께 만들었습니다.',
   },

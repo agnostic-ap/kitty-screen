@@ -7,6 +7,9 @@ const ja: Translation = {
     languageLabel: "言語",
     preview: "プレビュー",
     github: "GitHub",
+    updateAvailable: "新しいバージョンがあります",
+    updateDescription: "GitHub Releases から新しい版をダウンロードできます。",
+    updateOpen: "リリースを見る",
     credit:
       "Elliot と娘の「毛球」（名前は「ふわふわの毛玉」という意味。4歳のノルウェージャンフォレストキャット）が一緒に作りました。",
   },

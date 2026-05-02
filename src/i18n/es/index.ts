@@ -7,6 +7,9 @@ const es: Translation = {
     languageLabel: "Idioma",
     preview: "Vista previa",
     github: "GitHub",
+    updateAvailable: "Actualización disponible",
+    updateDescription: "Hay una nueva versión lista en GitHub Releases.",
+    updateOpen: "Ver versión",
     credit:
       'Creado por Elliot y su hija "毛球" (su nombre significa "bolita de pelo"; es una gata Bosque de Noruega de 4 años).',
   },

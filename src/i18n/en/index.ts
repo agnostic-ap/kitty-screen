@@ -7,6 +7,9 @@ const en: BaseTranslation = {
     languageLabel: "Language",
     preview: "Preview",
     github: "GitHub",
+    updateAvailable: "Update available",
+    updateDescription: "A new GitHub release is ready to download.",
+    updateOpen: "View release",
     credit:
       'Made by Elliot and his daughter "毛球" (the name means "fluffy furball"; she is a 4-year-old Norwegian Forest cat).',
   },

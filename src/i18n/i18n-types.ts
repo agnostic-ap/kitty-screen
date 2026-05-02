@@ -46,6 +46,18 @@ type RootTranslation = {
      */
     github: string;
     /**
+     * U​p​d​a​t​e​ ​a​v​a​i​l​a​b​l​e
+     */
+    updateAvailable: string;
+    /**
+     * A​ ​n​e​w​ ​G​i​t​H​u​b​ ​r​e​l​e​a​s​e​ ​i​s​ ​r​e​a​d​y​ ​t​o​ ​d​o​w​n​l​o​a​d​.
+     */
+    updateDescription: string;
+    /**
+     * V​i​e​w​ ​r​e​l​e​a​s​e
+     */
+    updateOpen: string;
+    /**
      * M​a​d​e​ ​b​y​ ​E​l​l​i​o​t​ ​a​n​d​ ​h​i​s​ ​d​a​u​g​h​t​e​r​ ​"​毛​球​"​ ​(​t​h​e​ ​n​a​m​e​ ​m​e​a​n​s​ ​"​f​l​u​f​f​y​ ​f​u​r​b​a​l​l​"​;​ ​s​h​e​ ​i​s​ ​a​ ​4​-​y​e​a​r​-​o​l​d​ ​N​o​r​w​e​g​i​a​n​ ​F​o​r​e​s​t​ ​c​a​t​)​.
      */
     credit: string;
@@ -214,6 +226,18 @@ export type TranslationFunctions = {
      * GitHub
      */
     github: () => LocalizedString;
+    /**
+     * Update available
+     */
+    updateAvailable: () => LocalizedString;
+    /**
+     * A new GitHub release is ready to download.
+     */
+    updateDescription: () => LocalizedString;
+    /**
+     * View release
+     */
+    updateOpen: () => LocalizedString;
     /**
      * Made by Elliot and his daughter "毛球" (the name means "fluffy furball"; she is a 4-year-old Norwegian Forest cat).
      */

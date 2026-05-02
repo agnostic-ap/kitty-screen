@@ -7,6 +7,9 @@ const fr: Translation = {
     languageLabel: "Langue",
     preview: "Aperçu",
     github: "GitHub",
+    updateAvailable: "Mise à jour disponible",
+    updateDescription: "Une nouvelle version est prête sur GitHub Releases.",
+    updateOpen: "Voir la version",
     credit:
       "Créé par Elliot et sa fille « 毛球 » (son nom veut dire « boule de poils » ; c’est une chatte Norvégienne de 4 ans).",
   },

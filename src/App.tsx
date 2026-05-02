@@ -1,5 +1,6 @@
 import FlipClockCountdown from "@leenguyen/react-flip-clock-countdown";
 import "@leenguyen/react-flip-clock-countdown/dist/index.css";
+import { getVersion } from "@tauri-apps/api/app";
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { resolveResource } from "@tauri-apps/api/path";
@@ -37,6 +38,27 @@ type ScreensaverState = {
   generation: number;
 };
 
+type GitHubRelease = {
+  draft?: boolean;
+  html_url?: string;
+  prerelease?: boolean;
+  tag_name?: string;
+};
+
+type ReleasePackageJson = {
+  version?: string;
+};
+
+type UpdateInfo = {
+  url: string;
+  version: string;
+};
+
+type UpdateCheckCache = {
+  checkedAt: number;
+  release: UpdateInfo | null;
+};
+
 const SUPPORTED_LOCALES = [
   "en",
   "zh-CN",
@@ -60,7 +82,14 @@ const DEFAULT_SETTINGS: Settings = {
 const CLOCK_REVEAL_DELAY_MS = 10_000;
 const LOOP_REPLAY_START_SECONDS = 8.466;
 const LOOP_REPLAY_END_PADDING_SECONDS = 0.18;
+const GITHUB_REPOSITORY = "elliothux/kitty-screen";
 const GITHUB_URL = "https://github.com/elliothux/kitty-screen";
+const GITHUB_RELEASES_URL = `${GITHUB_URL}/releases`;
+const GITHUB_LATEST_RELEASE_API_URL = `https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/latest`;
+const JSDELIVR_LATEST_PACKAGE_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@latest/package.json`;
+const UPDATE_CHECK_CACHE_KEY = "kitty-screen:update-check";
+const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const UPDATE_CHECK_TIMEOUT_MS = 8_000;
 
 const DEFAULT_SCREENSAVER_STATE: ScreensaverState = {
   isShowing: false,
@@ -101,6 +130,185 @@ function normalizeSettings(settings: Partial<Settings>): Settings {
         ? settings.locale
         : DEFAULT_LOCALE,
   };
+}
+
+function normalizeVersion(version: string) {
+  return version.trim().replace(/^v/i, "").split(/[+-]/)[0] ?? "";
+}
+
+function parseVersion(version: string) {
+  const normalized = normalizeVersion(version);
+
+  if (!/^\d+(?:\.\d+){0,2}$/.test(normalized)) {
+    return null;
+  }
+
+  const parts = normalized.split(".").map((part) => Number(part));
+
+  while (parts.length < 3) {
+    parts.push(0);
+  }
+
+  return parts;
+}
+
+function compareVersions(left: string, right: string) {
+  const leftParts = parseVersion(left);
+  const rightParts = parseVersion(right);
+
+  if (!leftParts || !rightParts) {
+    return 0;
+  }
+
+  for (let index = 0; index < 3; index += 1) {
+    const difference = leftParts[index] - rightParts[index];
+
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+
+  return 0;
+}
+
+function releaseToUpdateInfo(release: GitHubRelease): UpdateInfo | null {
+  const version = release.tag_name?.trim();
+
+  if (!version || release.draft || release.prerelease) {
+    return null;
+  }
+
+  return {
+    url: release.html_url ?? GITHUB_RELEASES_URL,
+    version,
+  };
+}
+
+function versionToReleaseTag(version: string) {
+  const normalized = normalizeVersion(version);
+  return normalized ? `v${normalized}` : "";
+}
+
+function packageJsonToUpdateInfo(
+  packageJson: ReleasePackageJson,
+): UpdateInfo | null {
+  const tag = versionToReleaseTag(packageJson.version ?? "");
+
+  if (!tag) {
+    return null;
+  }
+
+  return {
+    url: `${GITHUB_RELEASES_URL}/tag/${tag}`,
+    version: tag,
+  };
+}
+
+function readUpdateCheckCache(): UpdateCheckCache | null {
+  try {
+    const raw = localStorage.getItem(UPDATE_CHECK_CACHE_KEY);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as Partial<UpdateCheckCache>;
+
+    if (typeof parsed.checkedAt !== "number") {
+      return null;
+    }
+
+    return {
+      checkedAt: parsed.checkedAt,
+      release: parsed.release ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeUpdateCheckCache(release: UpdateInfo | null) {
+  try {
+    localStorage.setItem(
+      UPDATE_CHECK_CACHE_KEY,
+      JSON.stringify({ checkedAt: Date.now(), release }),
+    );
+  } catch {
+    // Ignore private browsing or storage quota failures.
+  }
+}
+
+function availableUpdateFromRelease(
+  release: UpdateInfo | null,
+  currentVersion: string,
+) {
+  if (!release) {
+    return null;
+  }
+
+  return compareVersions(release.version, currentVersion) > 0 ? release : null;
+}
+
+async function fetchJson<T>(
+  url: string,
+  headers: Record<string, string> = { Accept: "application/json" },
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    UPDATE_CHECK_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Update check failed: ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function fetchLatestUpdateInfo() {
+  try {
+    return releaseToUpdateInfo(
+      await fetchJson<GitHubRelease>(GITHUB_LATEST_RELEASE_API_URL, {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      }),
+    );
+  } catch (primaryError) {
+    console.error(primaryError);
+  }
+
+  return packageJsonToUpdateInfo(
+    await fetchJson<ReleasePackageJson>(JSDELIVR_LATEST_PACKAGE_URL),
+  );
+}
+
+async function checkForAvailableUpdate() {
+  const currentVersion = await getVersion();
+  const cached = readUpdateCheckCache();
+
+  if (cached && Date.now() - cached.checkedAt < UPDATE_CHECK_INTERVAL_MS) {
+    return availableUpdateFromRelease(cached.release, currentVersion);
+  }
+
+  try {
+    const release = await fetchLatestUpdateInfo();
+    writeUpdateCheckCache(release);
+    return availableUpdateFromRelease(release, currentVersion);
+  } catch (error) {
+    console.error(error);
+    return availableUpdateFromRelease(cached?.release ?? null, currentVersion);
+  }
 }
 
 function delayOptions(LL: TranslationFunctions) {
@@ -195,10 +403,12 @@ function OptionGroup<T extends OptionValue>({
 }
 
 function App() {
+  const isScreensaver = isScreensaverRoute();
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [screensaverState, setScreensaverState] = useState<ScreensaverState>(
     DEFAULT_SCREENSAVER_STATE,
   );
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const LL = useMemo(() => i18nObject(settings.locale), [settings.locale]);
   const delayChoices = useMemo(() => delayOptions(LL), [LL]);
@@ -257,6 +467,32 @@ function App() {
     document.documentElement.lang = settings.locale;
   }, [settings.locale]);
 
+  useEffect(() => {
+    if (isScreensaver) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function checkForUpdates() {
+      try {
+        const next = await checkForAvailableUpdate();
+
+        if (!cancelled) {
+          setUpdateInfo(next);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void checkForUpdates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isScreensaver]);
+
   const saveSettings = useCallback(
     async (next: Settings) => {
       setSettings(next);
@@ -282,19 +518,29 @@ function App() {
     await refreshScreensaverState();
   }, [refreshScreensaverState]);
 
-  const openGitHub = useCallback(async () => {
+  const openExternalUrl = useCallback(async (url: string) => {
     try {
       await invoke("plugin:opener|open_url", {
-        url: GITHUB_URL,
+        url,
         with: null,
       });
     } catch (error) {
       console.error(error);
-      window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   }, []);
 
-  if (isScreensaverRoute()) {
+  const openGitHub = useCallback(async () => {
+    await openExternalUrl(GITHUB_URL);
+  }, [openExternalUrl]);
+
+  const openUpdate = useCallback(async () => {
+    if (updateInfo) {
+      await openExternalUrl(updateInfo.url);
+    }
+  }, [openExternalUrl, updateInfo]);
+
+  if (isScreensaver) {
     return <ScreensaverView LL={LL} state={screensaverState} />;
   }
 
@@ -312,6 +558,10 @@ function App() {
             Kitty Screen
           </h1>
         </header>
+
+        {updateInfo && (
+          <UpdateNotice LL={LL} info={updateInfo} onOpen={openUpdate} />
+        )}
 
         <OptionGroup
           id="delay"
@@ -362,6 +612,37 @@ function App() {
       </section>
       <p className="settings-credit">{LL.settings.credit()}</p>
     </main>
+  );
+}
+
+function UpdateNotice({
+  LL,
+  info,
+  onOpen,
+}: {
+  LL: TranslationFunctions;
+  info: UpdateInfo;
+  onOpen: () => void;
+}) {
+  return (
+    <section className="update-notice" aria-live="polite">
+      <div className="update-notice__copy">
+        <strong>
+          {LL.settings.updateAvailable()} {info.version}
+        </strong>
+        <span>{LL.settings.updateDescription()}</span>
+      </div>
+      <div className="update-notice__actions">
+        <Button
+          aria-label={String(LL.settings.updateOpen())}
+          onClick={onOpen}
+          size="icon"
+          variant="success"
+        >
+          <ExternalLink aria-hidden="true" />
+        </Button>
+      </div>
+    </section>
   );
 }
 

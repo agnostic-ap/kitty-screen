@@ -75,7 +75,7 @@ button {
   margin: 0 auto;
   max-height: calc(100vh - clamp(4rem, 10vw, 8rem));
   max-width: 880px;
-  overflow: hidden;
+  overflow: auto;
   padding: clamp(1rem, 3.6vw, 2rem);
   width: min(100%, 880px);
 }
@@ -116,6 +116,51 @@ h1 {
     "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
   font-size: clamp(0.82rem, 2.7vw, 1.55rem);
   line-height: 1.35;
+}
+
+.update-notice {
+  align-items: center;
+  background: #5de6ff;
+  box-shadow:
+    -4px 0 0 #101014,
+    4px 0 0 #101014,
+    0 4px 0 #101014,
+    0 -4px 0 #101014;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 4px;
+  padding: 0.75rem 0.85rem;
+  width: calc(100% - 8px);
+}
+
+.update-notice__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.update-notice__copy strong {
+  color: #101014;
+  font-family:
+    "Press Start 2P", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  font-size: clamp(0.56rem, 1.7vw, 0.78rem);
+  line-height: 1.45;
+}
+
+.update-notice__copy span {
+  color: rgba(16, 16, 20, 0.82);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.update-notice__actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.65rem;
 }
 
 .setting-row {
@@ -171,6 +216,9 @@ h1 {
 .settings-shell[data-locale^="zh"] .settings-credit,
 .settings-shell[data-locale="ja"] .settings-credit,
 .settings-shell[data-locale="ko"] .settings-credit,
+.settings-shell[data-locale^="zh"] .update-notice__copy span,
+.settings-shell[data-locale="ja"] .update-notice__copy span,
+.settings-shell[data-locale="ko"] .update-notice__copy span,
 .settings-shell[data-locale^="zh"]
   .option-grid:not(.option-grid--language)
   .pixel__button,
@@ -207,7 +255,7 @@ h1 {
 
 .settings-credit {
   color: rgba(16, 16, 20, 0.72);
-  font-size: 0.72rem;
+  font-size: 0.6rem !important;
   font-weight: 700;
   line-height: 1.45;
   margin: 0;
@@ -298,7 +346,9 @@ h1 {
 
 @media (max-width: 720px) {
   .settings-header,
-  .settings-actions {
+  .settings-actions,
+  .update-notice,
+  .update-notice__actions {
     align-items: stretch;
     flex-direction: column;
   }
