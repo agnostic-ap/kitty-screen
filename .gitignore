@@ -163,13 +163,5 @@ src-tauri/gen/schemas/
 /docs/
 /keys/
 
-# Web public assets (user-supplied videos; not committed)
-web-public/assets/*.mp4
-web-public/assets/*.webm
-web-public/assets/*.mov
-
-# Web build output
-dist-web/
-
 # npm lock file (project uses bun.lock)
 package-lock.json
