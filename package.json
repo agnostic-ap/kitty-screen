@@ -22,7 +22,11 @@
     "release:mac": "node scripts/release-macos.mjs",
     "release:windows:upload": "node scripts/release-windows-upload.mjs",
     "typecheck": "tsc --noEmit",
-    "videos": "node scripts/generate-videos.mjs"
+    "videos": "node scripts/generate-videos.mjs",
+    "web:assets": "mkdir -p web-public/assets && cp assets/kitty.mp4 web-public/assets/ && cp assets/kitty-loop.mp4 web-public/assets/ && echo 'Assets copied to web-public/assets/'",
+    "web:assets:webm": "mkdir -p web-public/assets && cp resources/videos/windows/kitty-screen.webm web-public/assets/kitty.webm && echo 'WebM (transparent) copied to web-public/assets/'",
+    "web:build": "bun run i18n && tsc && vite build --config vite.web.config.ts",
+    "web:dev": "vite --config vite.web.config.ts"
   },
   "simple-git-hooks": {
     "pre-commit": "test -f \"$(git rev-parse --git-path MERGE_HEAD)\" && exit 0 || bun run check:staged"

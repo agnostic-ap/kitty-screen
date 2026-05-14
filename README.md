@@ -1,13 +1,11 @@
 # Kitty Screen
 
-[中文说明](README.zh.md) · [GitHub](https://github.com/elliothux/kitty-screen) · [Download](https://github.com/elliothux/kitty-screen/releases)
+[中文说明](README.zh.md) · [Detailed Tutorial](TUTORIAL.md) · [GitHub](https://github.com/elliothux/kitty-screen) · [Download](https://github.com/elliothux/kitty-screen/releases)
 
-Kitty Screen is a Tauri + React screen saver app that displays a cat animation as a screen-blocking overlay. It activates after the screen has stayed on continuously for the configured amount of time, helping interrupt long uninterrupted screen sessions.
-
-The animation asset is produced from green-screen cat footage, then converted into platform-specific transparent video resources for the app.
+Kitty Screen is a screen-break reminder app that displays a cat animation after extended screen time. It comes in two forms: a **desktop app** (macOS / Windows) built with Tauri + React that overlays a transparent animated cat on top of all windows, and a **browser version** that works in any modern browser without installation.
 
 <p align="center">
-  <img src="assets/icon.png" alt="Kitty Screen app icon" width="200" />
+  <img src="assets/icon.png" alt="Kitty Screen app icon" width="180" />
 </p>
 
 ## Preview
@@ -17,157 +15,101 @@ The animation asset is produced from green-screen cat footage, then converted in
   <img src="assets/preview-1.png" alt="Kitty Screen overlay preview 2" width="360" />
 </p>
 
-## Download
+## Desktop vs Web
 
-Download the latest app build from [GitHub Releases](https://github.com/elliothux/kitty-screen/releases).
+| | Desktop App | Web Version |
+|---|---|---|
+| Platform | macOS, Windows | Any modern browser |
+| Installation | Download & install | No install needed |
+| Screen overlay | OS-level transparent window | Full-viewport browser overlay |
+| Transparent cat | ✅ | ✅ (WebM) / dark bg fallback |
+| Auto-activates | ✅ OS idle detection | ✅ Counts visible-tab time |
+| Settings | Native app preferences | localStorage |
 
-## Prompt Templates
+---
 
-Reusable prompts for image and video generation live in [PROMPTS.md](PROMPTS.md).
+## Download Desktop App
 
-Use that file when generating a new cat identity or rebuilding the screensaver animation sequence.
+Download the latest build from [GitHub Releases](https://github.com/elliothux/kitty-screen/releases).
 
-## How to Customize Your Own Cat Character
+- **macOS**: `Kitty.Screen_x.x.x_universal.dmg`
+- **Windows**: `Kitty.Screen_x.x.x_x64-setup.exe`
 
-You can replace the default cat with your own cat by rebuilding the animation assets. The app expects a green-screen entrance video and a shorter green-screen loop video, then converts them into transparent platform-specific resources during the build workflow.
+---
 
-The short version is:
+## Run the Web Version
 
-1. Prepare reference photos of your cat.
-2. Generate ordered green-screen keyframes.
-3. Turn those keyframes into two green-screen videos.
-4. Convert the videos into transparent macOS and Windows resources.
-5. Run the app and tune the chroma key if needed.
-
-### 1. Prepare Reference Photos
-
-Collect clear, high-resolution photos of the cat you want to use. The image model needs enough visual information to keep the same identity across every generated frame.
-
-Recommended photo set:
-
-- A front-facing face close-up.
-- Left and right side profiles.
-- A full-body standing or walking pose.
-- A sitting pose.
-- A lying or relaxed pose.
-- Close shots that show coat markings, paws, tail, eyes, ear shape, and fur length.
-
-Keep the reference photos focused on one cat. Avoid photos with other animals, busy backgrounds, heavy filters, costumes, or extreme lighting. If your cat has distinctive markings, include at least one photo where those markings are easy to see.
-
-### 2. Generate Green-Screen Keyframes
-
-Use GPT Image or another image model that can follow image references. The goal is to generate a numbered sequence of still frames where your cat follows the same movement as the built-in example.
-
-Use two kinds of references:
-
-- Identity references: your cat photos. These control face, coat color, markings, body shape, fur length, paws, tail, and general appearance.
-- Motion references: `assets/raw-furryball/001.png` through `assets/raw-furryball/012.png`. These control pose, camera angle, body placement, and animation timing.
-
-Save the generated frames under a new folder:
-
-```text
-assets/raw-<cat-name>/001.png
-assets/raw-<cat-name>/002.png
-...
-assets/raw-<cat-name>/012.png
-```
-
-Each frame should use a flat `#00ff00` green-screen background. Keep it clean: no floor, shadows, gradients, props, text, UI, furniture, room background, or extra animals. A perfectly flat green background makes the FFmpeg chroma key step much cleaner.
-
-Use [PROMPTS.md](PROMPTS.md) as the starting prompt. Replace the identity description with details from your cat, but keep the action, framing, and green-screen constraints strict.
-
-### 3. Generate the Entrance and Loop Videos
-
-Use a video generation tool that supports first-frame, last-frame, or ordered keyframe guidance. Upload the numbered keyframes in order and generate a continuous green-screen cat animation.
-
-Recommended settings:
-
-- 16:9 output.
-- Locked camera.
-- One consistent cat identity across the whole clip.
-- Uniform `#00ff00` green-screen background.
-- Slow entrance, stop, crouch, and final settled blocking pose.
-- No zoom, pan, tilt, tracking shot, room background, props, text, UI, shadows, or second animal.
-
-Export two videos:
-
-```text
-assets/kitty.mp4
-assets/kitty-loop.mp4
-```
-
-`assets/kitty.mp4` is the full entrance animation. It should include the cat moving into position and settling into the final screen-blocking pose.
-
-`assets/kitty-loop.mp4` is a shorter idle loop. It should start from the settled pose and contain only subtle motion, such as breathing, blinking, or a small tail movement. This keeps the screensaver alive without constantly replaying the full entrance.
-
-### 4. Convert the Videos Into App Resources
-
-Install dependencies first if you have not already:
+No installation required. Clone the repo and start the dev server:
 
 ```bash
-bun install
+git clone https://github.com/elliothux/kitty-screen.git
+cd kitty-screen
+npm install
+npm run web:assets   # copy cat videos into the web public folder
+npm run web:dev      # open http://localhost:5174/web.html
 ```
 
-Then generate the transparent video resources:
+For a transparent cat background (WebM with alpha), first generate the transparent video:
 
 ```bash
-bun run videos
+brew install ffmpeg        # macOS — skip if already installed
+npm run videos -- --platform windows
+npm run web:assets:webm
 ```
 
-This runs [scripts/generate-videos.mjs](scripts/generate-videos.mjs). It reads `assets/kitty.mp4` and `assets/kitty-loop.mp4`, removes the green background with FFmpeg, applies despill, verifies alpha, and writes the platform-specific outputs:
+Then restart `npm run web:dev`.
 
-```text
-resources/videos/macos/kitty-screen.mov
-resources/videos/windows/kitty-screen.webm
-```
+---
 
-You can regenerate only one platform when iterating:
+## Customizing Your Own Cat
 
-```bash
-bun run videos -- --platform macos
-bun run videos -- --platform windows
-```
+You can replace the built-in cat with any cat — real or AI-generated. The workflow:
 
-### 5. Preview and Tune the Result
+1. **Prepare reference photos** — collect clear photos of your cat from multiple angles.
+2. **Generate 12 green-screen keyframes** — use GPT-4o Image or Midjourney with your cat photos as identity references and `assets/raw-furryball/001–012.png` as pose guides.
+3. **Generate two green-screen videos** — use Runway Gen-4, Kling, or Sora.
+4. **Convert to transparent resources** — `npm run videos` removes the green background via FFmpeg.
+5. **Preview and tune** — run the app and adjust chroma-key parameters if needed.
 
-Run the Tauri app locally:
+See [TUTORIAL.md](TUTORIAL.md) for step-by-step instructions with exact prompts and tool recommendations.
 
-```bash
-bun run app:dev
-```
+**Prompt templates** for image and video generation are in [PROMPTS.md](PROMPTS.md).
 
-Use the Preview button in the app to check the overlay. Look for these issues:
-
-- Green edges around fur.
-- Missing transparent areas.
-- Flickering background.
-- Cat identity drifting between frames.
-- The loop jumping too sharply when it repeats.
-
-If the green background is not keyed cleanly, adjust `keyColor`, `similarity`, `blend`, and the despill constants in [scripts/generate-videos.mjs](scripts/generate-videos.mjs), then run `bun run videos` again. If the cat identity drifts or the pose changes too much, regenerate the keyframes or video before tuning FFmpeg; chroma key settings cannot fix inconsistent source footage.
+---
 
 ## Development
 
-Install dependencies:
+### Requirements
+
+- [Node.js](https://nodejs.org) ≥ 20 or [Bun](https://bun.sh) ≥ 1.1
+- [Rust](https://rustup.rs) + [Tauri CLI](https://tauri.app/start/prerequisites/) (desktop app only)
+- [FFmpeg](https://ffmpeg.org) (video conversion only)
+
+### Commands
 
 ```bash
-bun install
+npm install          # install dependencies
+
+# Desktop app
+npm run dev          # Vite dev server (frontend only)
+npm run app:dev      # full Tauri desktop app (requires Rust)
+
+# Web version
+npm run web:dev      # web dev server → http://localhost:5174/web.html
+npm run web:build    # production build → dist-web/
+npm run web:assets   # copy source MP4 videos to web-public/assets/
+npm run web:assets:webm  # copy transparent WebM to web-public/assets/
+
+# Assets
+npm run videos       # generate transparent video resources from assets/
+npm run icons        # regenerate app icons from assets/icon.png
+
+# Quality
+npm run check        # format + typecheck + lint
 ```
 
-Run the web app:
+---
 
-```bash
-bun run dev
-```
+## Credits
 
-Run the Tauri app:
-
-```bash
-bun run app:dev
-```
-
-Build:
-
-```bash
-bun run build
-```
+Originally made by [Elliot](https://github.com/elliothux) and his daughter "毛球" (a 4-year-old Norwegian Forest cat).
